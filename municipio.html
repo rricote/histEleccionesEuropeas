@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Resultados finales de un municipio en las elecciones al Parlamento Europeo, con mapa por secciones censales.">
+<title>Resultados por municipio</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="sitetitle"><a href="index.html">Elecciones al Parlamento Europeo en España</a></div>
+  <div class="topbar">
+    <nav class="crumbs" id="crumbs" aria-label="Migas de pan"></nav>
+  </div>
+  <div id="bar"></div>
+<nav class="tabs" role="tablist" aria-label="Secciones"><button type="button" role="tab" id="tab-mun" aria-controls="p-mun" aria-selected="true">Municipio</button><button type="button" role="tab" id="tab-secs" aria-controls="p-secs" aria-selected="false" tabindex="-1">Análisis detallado de secciones censales</button><button type="button" role="tab" id="tab-par" aria-controls="p-par" aria-selected="false" tabindex="-1">Partidos</button></nav>
+  <div class="panel" id="p-mun" role="tabpanel" aria-labelledby="tab-mun">
+  <div class="mapwrap" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+    <section class="card mapcol">
+      <h2 id="mapt">Mapa por secciones censales</h2>
+      <div class="seg2" role="group" aria-label="Nivel del mapa"><button type="button" id="vSec" aria-pressed="true">Secciones censales</button><button type="button" id="vMun" aria-pressed="false">Municipios de la provincia</button></div>
+      <div class="toolrow"><label class="fld"><span class="lbl">Color</span><select id="colSel"></select></label></div>
+      <p class="note" id="mapn" style="margin-top:8px"></p>
+      <svg class="pmap sec" id="pmap" role="img" aria-label="Mapa del municipio"></svg>
+      <div class="leg2" id="mleg"></div>
+      <p class="mapnote" id="mapnote"></p>
+    </section>
+    <section class="card pd" id="pd"></section>
+  </div>
+
+  </div>
+  <div class="panel" id="p-secs" role="tabpanel" aria-labelledby="tab-secs" hidden>
+  <section class="card" id="pbcard"></section>
+  <div class="cols one">
+    <section class="card">
+      <h2 id="stt">Secciones censales</h2>
+      <p class="note" id="stn">Cada fila es una sección censal (distrito + sección). Pasa el ratón por una fila para resaltarla en el mapa; ordena con las cabeceras.</p>
+      <div class="tw tall"><table class="pt mt mun" id="stab"></table></div>
+    </section>
+  </div>
+
+  </div>
+  <div class="panel" id="p-par" role="tabpanel" aria-labelledby="tab-par" hidden></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="tt" id="tt"></div>
+<script src="js/lib.js" charset="utf-8"></script>
+<script>
+const MID = (() => { let m = Q.get('m') || DEF_MUN; return /^\d{5}$/.test(m) ? m : DEF_MUN })();
+const PID = MID.slice(0, 2), C3 = MID.slice(2), AUTO = !!AUTONOMAS[PID];
+let P, PJ, SECJ = null, MUNJ, M = [], MU, S = [], VIEW = 'sec', COL = -1, SORT = { k: 'cus', d: 1 }, ALLP = false, HL = null;
+const toG = loc => { const g = new Array(NP).fill(0); loc.forEach((v, j) => g[PJ.parties[j]] = v); return g };
+function build() {
+  M = PJ.m.map(m => { const v = toG(m[5]); return { id: PID + m[0], c3: m[0], n: m[1], censo: m[2], bl: m[3], nu: m[4], v, w: winOf(v, m[3]), pob: m[7], raw: m, valid: v.reduce((a, b) => a + b, 0) + m[3] } });
+  MU = M.find(m => m.c3 === C3);
+  S = MU.raw[6].map(s => { const v = toG(s.slice(4)), vc = v.reduce((a, b) => a + b, 0), valid = vc + s[2]; return { cus: s[0], key: C3 + s[0], censo: s[1], bl: s[2], nu: s[3], v, valid, w: winOf(v, s[2]), part: s[1] ? (valid + s[3]) / s[1] : 0 } });
+}
+const secName = c => `Dist. ${c.slice(0, 2)} · Sec. ${c.slice(2)}`;
+function head() {}
+/* ---- color ---- */
+function colorFn(units) {   // units: [{v,bl,valid}] -> función(u) -> estilo
+  if (COL < 0) return u => (u.w ? shade(u.w.w, u.w.m, 0.30) : '');
+  const xs = units.filter(u => u.valid > 0).map(u => u.v[COL] / u.valid), mn = Math.min(...xs), mx = Math.max(...xs), r = mx - mn || 1;
+  return u => u.valid > 0 ? `fill:${pcol(COL)};fill-opacity:${(0.08 + 0.92 * (u.v[COL] / u.valid - mn) / r).toFixed(2)}` : '';
+}
+function legend(units) {
+  if (COL < 0) { const used = new Set(units.filter(u => u.w).map(u => u.w.w)); $('#mleg').innerHTML = [...used].sort((a, b) => a - b).map(i => `<span><i style="background:${pcol(i)}"></i>${esc(G.parties[i].n)}</span>`).join('') + '<span>Más pálido = ventaja más corta</span>'; return }
+  const xs = units.filter(u => u.valid > 0).map(u => u.v[COL] / u.valid), mn = Math.min(...xs), mx = Math.max(...xs);
+  $('#mleg').innerHTML = `<span>${fmt(mn)}</span><span style="display:inline-block;width:120px;height:10px;border-radius:2px;background:linear-gradient(90deg,color-mix(in srgb,${pcol(COL)} 8%,transparent),${pcol(COL)})"></span><span>${fmt(mx)} · % de ${esc(G.parties[COL].n)}</span>`;
+}
+function map() {
+  const svg = $('#pmap'); hoverFront(svg); $('#vSec').setAttribute('aria-pressed', VIEW === 'sec'); $('#vMun').setAttribute('aria-pressed', VIEW === 'mun');
+  $('#mapt').textContent = VIEW === 'sec' ? 'Mapa por secciones censales' : 'Mapa por municipios de la provincia';
+  svg.classList.toggle('sec', VIEW === 'sec'); svg.classList.toggle('munmap', VIEW === 'mun');
+  if (VIEW === 'sec') {
+    const cf = colorFn(S), shapes = SECJ ? SECJ.s.filter(x => x[0].startsWith(C3)) : [], byKey = {}; S.forEach(s => byKey[s.key] = s);
+    if (!shapes.length) { svg.innerHTML = ''; $('#mapn').textContent = ''; $('#mleg').innerHTML = ''; $('#mapnote').innerHTML = '<span class="sorry">No hay mapa de secciones disponible para este municipio. Prueba la vista «Municipios de la provincia».</span>'; return }
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.innerHTML = '<g id="gm">' + shapes.map(([k, d]) => { const s = byKey[k]; if (!s) return `<path class="nd" d="${d}"><title>${secName(k.slice(3))} · sin datos de votos</title></path>`;
+      return `<path d="${d}" data-k="${k}" style="${cf(s)}"><title>${secName(s.cus)} · ${s.w ? esc(G.parties[s.w.w].n) + ' ' + fmt(s.w.sh) + ' · ventaja ' + nf(s.w.m * 100, 1) + ' pts' : 'sin votos'}${COL >= 0 ? ' · ' + esc(G.parties[COL].n) + ' ' + fmt(s.v[COL] / s.valid) : ''} · ${nf(s.censo)} electores</title></path>` }).join('') + '</g>';
+    const bb = $('#gm').getBBox(), pad = Math.max(bb.width, bb.height) * 0.03;
+    svg.setAttribute('viewBox', `${bb.x - pad} ${bb.y - pad} ${bb.width + 2 * pad} ${bb.height + 2 * pad}`);
+    $('#mapn').textContent = COL < 0 ? 'Color: partido más votado en cada sección; cuanto más pálido, menor la ventaja sobre el segundo.' : `Color: % de voto de ${G.parties[COL].n} en cada sección (más intenso = mayor porcentaje dentro de este municipio).`;
+    legend(S);
+    const missing = S.filter(s => !shapes.some(x => x[0] === s.key)).length;
+    $('#mapnote').innerHTML = missing ? `${missing} ${missing === 1 ? 'sección' : 'secciones'} sin polígono en el seccionado del INE de ${G.mapyear}${G.year < 2001 ? ' (el más antiguo disponible)' : ''}: sus votos cuentan en el municipio y en la tabla.` : '';
+    const oldp = document.getElementById('upanel'); if (oldp) oldp.remove();
+    attachPanel(svg, 'path[data-k]', 'k', k => { const s = byKey[k]; if (!s) return null;
+      return { title: secName(s.cus), meta: `${AUTO ? esc(MU.n) : esc(MU.n)} · ${nf(s.censo)} electores`, v: s.v, bl: s.bl, nu: s.nu, censo: s.censo, ref: { v: MU.v, bl: MU.bl }, refName: 'el municipio',
+} }, 'Pasa el ratón por una sección censal para ver su voto al detalle. Pulsa para fijarla.');
+  } else {
+    const oldp = document.getElementById('upanel'); if (oldp) oldp.remove();
+    const units = M, cf = colorFn(units.filter(u => u.w));
+    svg.setAttribute('viewBox', `0 0 ${MUNJ.w} ${MUNJ.h}`);
+    svg.innerHTML = MUNJ.ms.map(([c3, name, d]) => { const m = M.find(x => x.c3 === c3); if (!m || !m.w) return `<path class="nd" d="${d}"><title>${esc(name)}</title></path>`;
+      const valid = m.v.reduce((a, b) => a + b, 0) + m.bl; m.valid = valid;
+      return `<path class="${c3 === C3 ? 'cur' : 'ctx'}" d="${d}" style="${cf(m)}" data-m="${m.id}" tabindex="0" role="link" aria-label="${esc(name)}"><title>${esc(name)} · ${esc(G.parties[m.w.w].n)} ${fmt(m.w.sh)} · ventaja ${nf(m.w.m * 100, 1)} pts</title></path>` }).join('');
+    const cur = svg.querySelector('path.cur'); if (cur) svg.appendChild(cur);
+    svg.querySelectorAll('path[data-m]').forEach(p => { const go = () => { if (p.dataset.m !== MID) nav(hMun(p.dataset.m)) }; p.onclick = go; p.onkeydown = e => { if (e.key === 'Enter') go() } });
+    $('#mapn').textContent = (COL < 0 ? 'Color: partido más votado en cada municipio de la provincia' : `Color: % de voto de ${G.parties[COL].n} en cada municipio`) + `. El municipio de ${MU.n} aparece con el borde marcado; pulsa otro para cambiar.`;
+    legend(M.filter(m => m.w)); $('#mapnote').textContent = MUNJ.ms.some(x => x[0] === C3) ? '' : 'Este municipio no figura en los límites municipales actuales (desaparecido o fusionado): sus votos cuentan en la tabla y en la provincia.';
+  }
+}
+function hl(k, scroll) {
+  HL = k; document.querySelectorAll('#pmap path.hl').forEach(p => p.classList.remove('hl')); document.querySelectorAll('#stab tr.hl').forEach(p => p.classList.remove('hl'));
+  if (!k) return; const p = document.querySelector(`#pmap path[data-k="${k}"]`); if (p) { p.classList.add('hl'); p.parentNode.appendChild(p) }
+  const r = document.querySelector(`#stab tr[data-k="${k}"]`); if (r) r.classList.add('hl');
+}
+function detail() {
+  const m = MU, RF = AUTO ? G.nat : P, pa = shares(RF.v, RF.bl), ma = shares(m.v, m.bl), vt = m.v.reduce((a, b) => a + b, 0) + m.bl + m.nu;
+  const idx = m.v.map((x, i) => i).filter(i => m.v[i] > 0).sort((a, b) => m.v[b] - m.v[a]);
+  let ks = idx.filter(i => ma.row[i] >= 0.005 || idx.indexOf(i) < 6); if (ALLP) ks = idx;
+  const w = m.w, t2 = w && w.s >= 0 ? w.s : -1;
+  $('#pd').innerHTML = `<h3>${esc(m.n)}</h3><div class="meta">${AUTO ? 'Ciudad autónoma' : 'Provincia de ' + esc(P.n) + ' · ' + esc(G.cc[G.ci[P.cc]].n)} · código INE ${MID} · ${nf(ma.valid)} votos válidos</div>
+  <div class="kpis k4"><div><b>${fmt(vt / m.censo)}</b><span>participación (${nf(vt)} votantes de ${nf(m.censo)} electores)</span></div>
+  <div><b>${w ? esc(G.parties[w.w].n) : '–'}</b><span>más votado, con ${w ? fmt(w.sh) : '–'} (${w ? nf(m.v[w.w]) : '–'} votos)</span></div>
+  <div><b>${w && t2 >= 0 ? nf(m.v[w.w] - m.v[t2]) : '–'}</b><span>votos de ventaja sobre ${t2 >= 0 ? esc(G.parties[t2].n) : '–'}${w && t2 >= 0 ? ` (${nf(w.m * 100, 1)} pts)` : ''}</span></div>
+  <div><b>${fmt(m.bl / ma.valid)}</b><span>voto en blanco (${nf(m.bl)}) · ${nf(m.nu)} votos nulos</span></div></div>
+  <div class="tw"><table class="pt mt prt vt"><thead><tr><th>Partido</th><th>Votos</th><th>% voto</th>${AUTO ? '<th>% España</th><th>Dif.</th><th>Peso en España</th>' : '<th>% provincia</th><th>Dif.</th><th>Peso en la prov.</th>'}</tr></thead><tbody>${ks.map(i => { const d = ma.row[i] - pa.row[i];
+    return `<tr><td><span class="wn">${swatch(i)}${esc(G.parties[i].n)}</span></td><td class="num">${nf(m.v[i])}</td><td class="num"><b>${fmt(ma.row[i])}</b></td><td class="num">${fmt(pa.row[i])}</td><td class="num"><span class="${d >= 0 ? 'gd' : 'bd'}">${pts(d) || '0,0'}</span></td><td class="num" title="Parte del voto total del partido en ${AUTO ? 'España' : 'la provincia'} que sale de este municipio">${RF.v[i] ? fmt(m.v[i] / RF.v[i], 2) : '–'}</td></tr>` }).join('')}</tbody></table></div>
+  <p style="margin:10px 0 0"><button type="button" class="ghost" id="allp">${ALLP ? 'Mostrar solo los principales' : 'Mostrar todas las candidaturas'}</button></p>
+  <p class="note" style="margin:10px 0 0">«Dif.» es la diferencia en puntos entre el % del municipio y el de ${AUTO ? 'toda España' : 'toda la provincia'} (verde: va mejor en el municipio). «Peso» es el porcentaje de los votos del partido en ${AUTO ? 'España' : 'la provincia (CERA incluido)'} que salen de aquí.</p>
+  <p style="margin:14px 0 0" class="navbtns">${AUTO ? '' : `<a class="btnlk ghost" href="${hProv(PID)}">← ${G.cc[G.ci[P.cc]].provs.length > 1 ? 'Provincia de ' : ''}${esc(P.n)}</a>`}${!AUTO && G.cc[G.ci[P.cc]].provs.length > 1 ? `<a class="btnlk ghost" href="${hCc(P.cc)}">← ${esc(G.cc[G.ci[P.cc]].n)}</a>` : ''}<a class="btnlk ghost" href="${href('index.html')}">← España</a></p>`;
+  $('#allp').onclick = () => { ALLP = !ALLP; detail() };
+}
+let PBS;
+function pblock() {
+  const ps = G.parties.map((x, i) => i).filter(i => S.some(s => s.v[i] > 0)).sort((a, b) => MU.v[b] - MU.v[a]);
+  partyBlock($('#pbcard'), { state: PBS = PBS || { party: ps[0], ord: 'pct_desc' }, ps, units: S.map(s => ({ key: s.key, name: secName(s.cus), censo: s.censo, part: s.part, v: s.v, bl: s.bl, nu: s.nu })), parent: { v: MU.v, bl: MU.bl }, parentName: 'del municipio',
+    unitName: 'Sección', unitsPl: 'secciones censales', note: 'El número junto al nombre es su voto en el municipio. Elige un partido y cómo ordenar las secciones censales: la tabla muestra las diez primeras.', chipSub: j => nf(MU.v[j]) });
+}
+function stable() {
+  const ps = G.parties.map((x, i) => i).filter(i => S.some(s => s.v[i] > 0)).sort((a, b) => MU.v[b] - MU.v[a]);
+  const rows = S.map(s => { const o = { s, cus: s.cus, censo: s.censo, part: s.part, ganador: s.w ? G.parties[s.w.w].n : '', sh: s.w ? s.w.sh : 0, margen: s.w ? s.w.m : 0, bl: s.bl, nu: s.nu, pbl: s.valid ? s.bl / s.valid : 0 };
+    ps.forEach(i => o['p' + i] = s.valid ? s.v[i] / s.valid : 0); return o });
+  const k = SORT.k; rows.sort((a, b) => (typeof a[k] === 'string' ? a[k].localeCompare(b[k], 'es') : a[k] - b[k]) * SORT.d);
+  const th = (key, lab, cls = '') => `<th data-s="${key}" ${SORT.k === key ? `aria-sort="${SORT.d > 0 ? 'ascending' : 'descending'}"` : ''} class="${cls}">${lab}</th>`;
+  const cell = (sh, v) => `<td class="num pc">${fmt(sh)}<small>${nf(v)}</small></td>`;
+  $('#stt').textContent = S.length === 1 ? 'Sección censal' : 'Secciones censales';
+  $('#stab').innerHTML = `<thead><tr>${th('cus', 'Sección', 'stk')}${th('censo', 'Electores')}${th('part', 'Particip.')}${th('ganador', 'Más votado')}${th('sh', '% ganador')}${th('margen', 'Ventaja')}${ps.map(i => th('p' + i, `<span class="wn">${swatch(i)}${esc(G.parties[i].n)}</span>`)).join('')}${th('pbl', 'En blanco')}${th('nu', 'Nulos')}</tr></thead><tbody>${rows.map(r => `<tr class="rw" data-k="${r.s.key}"><td class="stk">${secName(r.cus)}</td><td class="num">${nf(r.censo)}</td><td class="num">${fmt(r.part)}</td><td>${r.s.w ? `<span class="wn">${swatch(r.s.w.w)}${esc(r.ganador)}</span>` : '–'}</td><td class="num">${r.s.w ? fmt(r.sh) : '–'}</td><td class="num">${r.s.w ? nf(r.margen * 100, 1) + ' pts' : '–'}</td>${ps.map(i => cell(r['p' + i], r.s.v[i])).join('')}${cell(r.pbl, r.bl)}<td class="num">${nf(r.nu)}</td></tr>`).join('')}</tbody>`;
+  $('#stab').querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { const kk = t.dataset.s; SORT = { k: kk, d: SORT.k === kk ? -SORT.d : (kk === 'cus' || kk === 'ganador' ? 1 : -1) }; stable() });
+  $('#stab').querySelectorAll('tr.rw').forEach(t => { t.onmouseenter = () => hl(t.dataset.k, false); t.onmouseleave = () => hl(null, false) });
+  if (HL) hl(HL);
+}
+function setCol(v) { COL = v; if (COL >= 0) SORT = { k: 'p' + COL, d: -1 }; else if (/^p\d+$/.test(SORT.k)) SORT = { k: 'cus', d: 1 }; map(); if (G.sections) stable() }
+function partidos() {
+  const ps = MU.v.map((x, i) => i).filter(i => MU.v[i] > 0).sort((a, b) => MU.v[b] - MU.v[a]).slice(0, 16), shapes = SECJ ? SECJ.s.filter(x => x[0].startsWith(C3)) : [];
+  partyTab($('#p-par'), { ps, parent: { name: MU.n, short: 'municipio', v: MU.v, bl: MU.bl }, chipSub: j => nf(G.nat.es[j]) + ' esc.',
+    note: 'El número junto al nombre es su número de escaños en España. Elige un partido para ver su porcentaje de voto en cada sección censal del municipio.',
+    levels: [{ id: 'sec', label: 'Secciones censales', one: 'Sección', pl: 'secciones censales', labels: false, units: S.map(s => ({ key: s.key, name: secName(s.cus), v: s.v, bl: s.bl, link: null })),
+      draw: (h, st, tx, ti, pk) => shapes.length ? ptSvg(h, shapes, 'fit', st, null, ti, pk, true) : h.innerHTML = '<p class="note">No hay mapa de secciones disponible para este municipio.</p>' }] });
+}
+(async () => {
+  try {
+    await loadG(); P = G.prov[G.pi[PID]];
+    [PJ, MUNJ] = await Promise.all([loadProv(PID), loadMunMap(PID)]);
+    SECJ = await loadSecMap(PID);
+    if (!G.sections) { VIEW = 'mun'; document.querySelector('.seg2').style.display = 'none'; document.querySelector('.tabs').style.display = 'none' }
+    build(); if (!MU) throw new Error('Municipio no encontrado: ' + MID);
+    setPill(); document.title = MU.n + ' · europeas ' + G.year;
+    const C = G.cc[G.ci[P.cc]], cr = [{ t: 'España', h: href('index.html') }];
+    if (AUTO) cr.push({ l: 'Ciudad autónoma', t: MU.n });
+    else { if (C.provs.length > 1) cr.push({ l: 'Comunidad', t: C.n, h: hCc(C.id) }, { l: 'Provincia', t: P.n, h: hProv(PID) }); else cr.push({ l: 'Comunidad', t: C.n, h: hProv(PID) }); cr.push({ l: 'Municipio', t: MU.n }) }
+    crumbs(cr);
+    await mountBar(PID, `${MU.n} · ${P.n}`); mountTabs();
+    const top = MU.v.map((x, i) => i).filter(i => MU.v[i] > 0).sort((a, b) => MU.v[b] - MU.v[a]).slice(0, 12);
+    $('#colSel').innerHTML = '<option value="-1">Partido más votado</option>' + top.map(i => `<option value="${i}">% de ${esc(G.parties[i].n)}</option>`).join('');
+    $('#colSel').onchange = e => setCol(+e.target.value);
+    $('#vSec').onclick = () => { VIEW = 'sec'; map() }; $('#vMun').onclick = () => { VIEW = 'mun'; map() };
+    map(); detail(); if (G.sections) { stable(); pblock() } partidos();
+    $('#notes').innerHTML = notesHTML();
+  } catch (e) { console.error(e) }
+})();
+</script>
+</body>
+</html>

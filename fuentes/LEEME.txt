@@ -1,0 +1,5 @@
+Europeas: fuentes del proceso
+1. build_eu.py [aaaa-mm] -> lee los zips 07*_MESA del Interior (ficheros 03,05,06,07,08,09,10), agrega mesa->seccion->municipio->provincia (+CERA), comprueba D Hondt nacional sin barrera contra el 08 oficial y escribe datos/<eleccion>/.
+2. mk_maps.py sec <año> -> secciones del INE (2010, 2014, 2024); ccaa -> mapas/ccaa_mun (municipios por comunidad, seccionado 2024); nat -> mapas/ccaa.json (contornos de comunidades).
+Los mapas de secciones 2001, 2004 y 2019 y mapas/mun.json, mapas/provincias.json vienen de la web de Generales.
+Abrir index.html con doble clic.

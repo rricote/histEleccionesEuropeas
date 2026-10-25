@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Resultados finales de las elecciones al Parlamento Europeo en España por comunidad autónoma, provincia, municipio y sección censal.">
+<title>Elecciones europeas en España</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1 class="sitetitle"><a href="index.html">Elecciones al Parlamento Europeo en España</a></h1>
+  <div class="topbar">
+    <nav class="crumbs" id="crumbs" aria-label="Migas de pan"><span class="cur">España</span></nav>
+    <div class="navbtns">
+      <a class="btnlk" id="bCc" href="ccaa.html">Vista por comunidad →</a>
+      <a class="btnlk ghost" id="bProv" href="provincia.html">Vista por provincia →</a>
+      <a class="btnlk ghost" id="bMun" href="municipio.html">Vista por municipio →</a>
+    </div>
+  </div>
+  <section class="card" id="part"><div class="kpis k4" id="partk"></div></section>
+  <div id="bar"></div>
+<nav class="tabs" role="tablist" aria-label="Secciones"><button type="button" role="tab" id="tab-esp" aria-controls="p-esp" aria-selected="true">España</button><button type="button" role="tab" id="tab-det" aria-controls="p-det" aria-selected="false" tabindex="-1">Análisis detallado de las comunidades autónomas o de las provincias</button><button type="button" role="tab" id="tab-par" aria-controls="p-par" aria-selected="false" tabindex="-1">Partidos</button></nav>
+  <div class="panel" id="p-esp" role="tabpanel" aria-labelledby="tab-esp">
+  <div class="cols vt">
+    <section class="card">
+      <h2>Escaños</h2>
+      <p class="note" id="seatn"></p>
+      <div class="seg2" role="group" aria-label="Vista de escaños"><button type="button" data-sv="es" aria-pressed="true">Escaños de España</button><button type="button" data-sv="ep" aria-pressed="false">Distribución de los escaños en el Parlamento Europeo</button></div>
+      <div class="seg2" id="laySeg" role="group" aria-label="Disposición de los escaños españoles" hidden><button type="button" data-lay="blk" aria-pressed="true">Agrupados</button><button type="button" data-lay="lin" aria-pressed="false">En línea</button></div>
+      <div class="hemi"><svg id="hemi" viewBox="0 0 400 210" role="img" aria-label="Hemiciclo de escaños"></svg><div class="mid"><div class="n" id="hemin"></div><div class="lbl" id="hemil"></div></div></div>
+      <div class="tw" id="hleg" hidden></div>
+      <table class="tbl" id="tbl"><thead><tr><th>Partido</th><th>Escaños</th><th>Votos</th><th>% voto</th></tr></thead><tbody></tbody></table>
+    </section>
+    <section class="card">
+      <h2>Voto</h2>
+      <p class="note">% sobre votos válidos (incluye el voto en blanco), CERA incluido.</p>
+      <div class="rows" id="votes"></div>
+    </section>
+  </div>
+
+  <div class="mapwrap bigmap">
+    <section class="card">
+      <h2 id="mapt">Quién gana en cada comunidad autónoma</h2>
+      <div class="seg2" role="group" aria-label="Nivel del mapa"><button type="button" data-lv="esp" aria-pressed="false">España</button><button type="button" data-lv="cc" aria-pressed="true">Comunidades autónomas</button><button type="button" data-lv="prov" aria-pressed="false">Provincias</button></div>
+      <p class="note" id="mapn"></p>
+      <div id="tiles"></div><div class="leg" id="mleg"></div>
+    </section>
+    <section class="card pd" id="sd"></section>
+  </div>
+
+  <section class="card pd" id="pd"></section>
+
+  <section class="card" id="dhc"></section>
+
+  <section class="card">
+    <h2>El último escaño</h2>
+    <p class="note" id="lsn"></p>
+    <div class="ls" id="ls"></div>
+  </section>
+
+  </div>
+  <div class="panel" id="p-det" role="tabpanel" aria-labelledby="tab-det" hidden>
+  <section class="card" id="pbcard"></section>
+  <section class="card">
+    <h2 id="rtt">Resultados por comunidad autónoma</h2>
+    <div class="seg2" role="group" aria-label="Nivel de la tabla"><button type="button" data-rt="cc" aria-pressed="true">Comunidades autónomas</button><button type="button" data-rt="prov" aria-pressed="false">Provincias</button></div>
+    <p class="note">Pulsa una fila para abrir su vista. Ordena con las cabeceras.</p>
+    <div class="tw tall"><table class="pt mt mun" id="rtab"></table></div>
+  </section>
+
+  </div>
+  <div class="panel" id="p-par" role="tabpanel" aria-labelledby="tab-par" hidden></div>
+
+  <div class="notes" id="notes"></div>
+</div>
+<div class="tt" id="tt"></div>
+<script src="js/lib.js" charset="utf-8"></script>
+<script>
+let MAP, CCM, A, LV = 'cc', SELC = DEF_CC, SELP = DEF_PROV, ALL = false, RT = 'cc', SORT = { k: 'censo', d: -1 }, PBS, PBM = 'cc';
+const NATU = () => ({ v: G.nat.v, bl: G.nat.bl, s: G.seats });
+const EUSEQ = ['PTE', 'IU', 'PODEMOS', 'SUMAR', 'IP', 'HB', 'II', 'LPD', 'AHORA', 'ERC', 'PEP', 'BNG', 'PRIMAVERA', 'COMPROMIS', 'VERDES', 'PSOE', 'PA', 'GALEUSCA', 'CN', 'CEU', 'PNVUE', 'CIU', 'JUNTS', 'CE', 'CDS', 'UPYD', 'CS', 'RM', 'PDP', 'PP', 'SALF', 'VOX', 'FN'];
+const keyOrder = k => { const j = EUSEQ.indexOf(k); return j < 0 ? EUSEQ.indexOf('PSOE') + 0.5 : j };
+const rv = (x, to) => Math.round(x / to) * to;
+function partic() {
+  const n = G.nat, vc = n.v.reduce((a, b) => a + b, 0), vt = vc + n.bl + n.nu;
+  $('#partk').innerHTML = `<div><b>${fmt(vt / n.censo)}</b><span>participación sobre el censo</span></div><div><b>${nf(n.censo)}</b><span>electores</span></div><div><b>${nf(vt)}</b><span>votantes (${nf(vc + n.bl)} votos válidos)</span></div><div><b>${nf(n.nu)}</b><span>votos nulos · ${nf(n.bl)} en blanco</span></div>`;
+}
+function votes() { voteBars('#votes', G.nat.v, G.nat.bl, G.nat.nu, G.nat.censo, 11) }
+/* ---- hemiciclo: filas elegidas para que la separación entre escaños sea homogénea; escaños ordenados por ángulo ---- */
+/* Grupos del Parlamento Europeo en la sesión constitutiva (1987: composición de la legislatura 1984-89 al final, ya con España),
+   de izquierda a derecha, y reparto de los eurodiputados españoles por grupo. Fuentes: results.elections.europa.eu (sesión constitutiva) y Wikipedia. */
+const GC = { left: '#8e1b2b', red2: '#b5122f', green: '#3f9b46', reg: '#7b4fa0', soc: '#e3001b', lib: '#e6b800', epp: '#2f7fd6', cons: '#1b3f8b', nat: '#3b4a6b', far: '#4a3b2a', eur: '#2aa6a6', ni: '#8a8a8a' };
+const EPG = {
+  1987: { t: 'Legislatura 1984-1989 al final del mandato, con España y Portugal', g: [['COM', 'Comunistas (COM)', 48, GC.left], ['ARC', 'Arcoíris (ARC)', 20, GC.reg], ['SOC', 'Socialistas (SOC)', 166, GC.soc], ['LDR', 'Liberales (LDR)', 46, GC.lib], ['EPP', 'Partido Popular Europeo (PPE)', 112, GC.epp], ['ED', 'Demócratas Europeos (ED)', 66, GC.cons], ['RDE', 'Alianza Demócrata Europea (RDE)', 30, GC.nat], ['DR', 'Derecha Europea (DR)', 16, GC.far], ['NI', 'No inscritos', 14, GC.ni]],
+    es: { PSOE: { SOC: 28 }, PP: { ED: 17 }, CDS: { NI: 7 }, HB: { NI: 1 }, IU: { COM: 3 }, CIU: { LDR: 2, EPP: 1 }, PEP: { ARC: 1 } } },
+  1989: { t: 'Sesión constitutiva, julio de 1989', g: [['CG', 'Izquierda Unitaria (CG)', 14, GC.red2], ['GUE', 'Izquierda Unitaria Europea (GUE)', 28, GC.left], ['V', 'Verdes (V)', 30, GC.green], ['ARC', 'Arcoíris (ARC)', 13, GC.reg], ['SOC', 'Socialistas (SOC)', 180, GC.soc], ['LDR', 'Liberales (LDR)', 49, GC.lib], ['EPP', 'Partido Popular Europeo (PPE)', 121, GC.epp], ['ED', 'Demócratas Europeos (ED)', 34, GC.cons], ['RDE', 'Alianza Demócrata Europea (RDE)', 20, GC.nat], ['DR', 'Derecha Europea (DR)', 17, GC.far], ['NI', 'No inscritos', 12, GC.ni]],
+    es: { PSOE: { SOC: 27 }, PP: { EPP: 15 }, CIU: { EPP: 1, LDR: 1 }, CDS: { LDR: 5 }, IU: { GUE: 4 }, PEP: { ARC: 1 }, PA: { ARC: 1 }, IP: { V: 1 }, RM: { NI: 2 }, HB: { NI: 1 }, CN: { NI: 1 } } },
+  1994: { t: 'Sesión constitutiva, julio de 1994', g: [['GUE', 'Izquierda Unitaria Europea (GUE)', 28, GC.left], ['V', 'Verdes (V)', 23, GC.green], ['ARE', 'Alianza Radical Europea (ARE)', 19, GC.reg], ['PSE', 'Socialistas (PSE)', 198, GC.soc], ['ELDR', 'Liberales (ELDR)', 43, GC.lib], ['PPE', 'Partido Popular Europeo (PPE)', 157, GC.epp], ['FE', 'Forza Europa (FE)', 27, GC.cons], ['RDE', 'Alianza Democrática Europea (RDE)', 26, GC.nat], ['EN', 'Europa de las Naciones (EN)', 19, GC.eur], ['NI', 'No inscritos', 27, GC.ni]],
+    es: { PP: { PPE: 28 }, PSOE: { PSE: 22 }, IU: { GUE: 9 }, CIU: { PPE: 1, ELDR: 2 }, CN: { PPE: 1, ARE: 1 } } },
+  1999: { t: 'Sesión constitutiva, julio de 1999', g: [['GUE', 'Izquierda Unitaria (GUE/NGL)', 42, GC.left], ['VE', 'Verdes/ALE', 48, GC.green], ['PSE', 'Socialistas (PSE)', 180, GC.soc], ['ELDR', 'Liberales (ELDR)', 50, GC.lib], ['PPE', 'PPE-DE', 233, GC.epp], ['UEN', 'Unión por la Europa de las Naciones (UEN)', 31, GC.nat], ['EDD', 'Europa de las Democracias y las Diferencias (EDD)', 16, GC.eur], ['TGI', 'Grupo Técnico de Independientes (TGI)', 18, GC.far], ['NI', 'No inscritos', 8, GC.ni]],
+    es: { PP: { PPE: 27 }, CIU: { PPE: 1, ELDR: 2 }, PSOE: { PSE: 24 }, CE: { VE: 1, ELDR: 1 }, CN: { VE: 2 }, BNG: { VE: 1 }, IU: { GUE: 4 }, HB: { NI: 1 } } },
+  2004: { t: 'Sesión constitutiva, julio de 2004', g: [['GUE', 'Izquierda Unitaria (GUE/NGL)', 41, GC.left], ['VE', 'Verdes/ALE', 42, GC.green], ['PSE', 'Socialistas (PSE)', 200, GC.soc], ['ALDE', 'Liberales y Demócratas (ALDE)', 88, GC.lib], ['PPE', 'PPE-DE', 268, GC.epp], ['UEN', 'Unión por la Europa de las Naciones (UEN)', 27, GC.nat], ['IND', 'Independencia/Democracia (IND/DEM)', 37, GC.eur], ['NI', 'No inscritos', 29, GC.ni]],
+    es: { PP: { PPE: 24 }, PSOE: { PSE: 24, VE: 1 }, GALEUSCA: { ALDE: 2 }, IU: { VE: 1, GUE: 1 }, PEP: { VE: 1 } } },
+  2009: { t: 'Sesión constitutiva, julio de 2009 (736 escaños; España tenía entonces 50)', g: [['GUE', 'Izquierda Unitaria (GUE/NGL)', 35, GC.left], ['VE', 'Verdes/ALE', 55, GC.green], ['SD', 'Socialistas y Demócratas (S&D)', 184, GC.soc], ['ALDE', 'Liberales y Demócratas (ALDE)', 84, GC.lib], ['PPE', 'Partido Popular Europeo (PPE)', 265, GC.epp], ['ECR', 'Conservadores y Reformistas (ECR)', 54, GC.cons], ['EFD', 'Europa de la Libertad y la Democracia (EFD)', 32, GC.eur], ['NI', 'No inscritos', 27, GC.ni]],
+    es: { PP: { PPE: 23 }, PSOE: { SD: 21 }, CEU: { ALDE: 2 }, IU: { VE: 1, GUE: 1 }, PEP: { NI: 1 }, UPYD: { NI: 1 } },
+    nota: 'En la sesión constitutiva España tenía 50 escaños. Los 4 adicionales del Tratado de Lisboa (2 PSOE, 1 PP, 1 CEU) se incorporaron en diciembre de 2011 y no se muestran aquí.' },
+  2014: { t: 'Sesión constitutiva, julio de 2014', g: [['GUE', 'Izquierda Unitaria (GUE/NGL)', 52, GC.left], ['VE', 'Verdes/ALE', 50, GC.green], ['SD', 'Socialistas y Demócratas (S&D)', 191, GC.soc], ['ALDE', 'Liberales y Demócratas (ALDE)', 67, GC.lib], ['PPE', 'Partido Popular Europeo (PPE)', 221, GC.epp], ['ECR', 'Conservadores y Reformistas (ECR)', 70, GC.cons], ['EFDD', 'Europa de la Libertad y la Democracia Directa (EFDD)', 48, GC.eur], ['NI', 'No inscritos', 52, GC.ni]],
+    es: { PP: { PPE: 16 }, CEU: { PPE: 1, ALDE: 2 }, PSOE: { SD: 14 }, IU: { GUE: 5, VE: 1 }, PODEMOS: { GUE: 5 }, LPD: { GUE: 1 }, UPYD: { ALDE: 4 }, CS: { ALDE: 2 }, PRIMAVERA: { VE: 1 }, ERC: { VE: 2 } } },
+  2019: { t: 'Sesión constitutiva, julio de 2019', g: [['GUE', 'Izquierda Unitaria (GUE/NGL)', 41, GC.left], ['VE', 'Verdes/ALE', 74, GC.green], ['SD', 'Socialistas y Demócratas (S&D)', 154, GC.soc], ['RE', 'Renew Europe', 108, GC.lib], ['PPE', 'Partido Popular Europeo (PPE)', 182, GC.epp], ['ECR', 'Conservadores y Reformistas (ECR)', 62, GC.cons], ['ID', 'Identidad y Democracia (ID)', 73, GC.far], ['NI', 'No inscritos', 57, GC.ni]],
+    es: { PSOE: { SD: 20 }, PP: { PPE: 12 }, CS: { RE: 7 }, CEU: { RE: 1 }, PODEMOS: { GUE: 5, VE: 1 }, AHORA: { GUE: 1, VE: 1, NI: 1 }, VOX: { ECR: 3 }, JUNTS: { NI: 2 } } },
+  2024: { t: 'Sesión constitutiva, julio de 2024', g: [['LEFT', 'La Izquierda', 46, GC.left], ['VE', 'Verdes/ALE', 53, GC.green], ['SD', 'Socialistas y Demócratas (S&D)', 136, GC.soc], ['RE', 'Renew Europe', 77, GC.lib], ['PPE', 'Partido Popular Europeo (PPE)', 188, GC.epp], ['ECR', 'Conservadores y Reformistas (ECR)', 78, GC.cons], ['PFE', 'Patriotas por Europa (PfE)', 84, GC.nat], ['ESN', 'Europa de las Naciones Soberanas (ESN)', 25, GC.far], ['NI', 'No inscritos', 33, GC.ni]],
+    es: { PP: { PPE: 22 }, PSOE: { SD: 20 }, VOX: { PFE: 6 }, AHORA: { VE: 2, LEFT: 1 }, SUMAR: { VE: 2, LEFT: 1 }, SALF: { NI: 3 }, PODEMOS: { LEFT: 2 }, JUNTS: { NI: 1 }, CEU: { RE: 1 } } },
+};
+let SV = 'es', LAY = 'blk';
+function hemiPos(n, R = 188, k0 = 0.36) {
+  const r0 = R * k0; let best = null;
+  for (let rows = 1; rows <= 40; rows++) {
+    const radii = [...Array(rows)].map((_, k) => rows === 1 ? (r0 + R) / 2 : r0 + (R - r0) * k / (rows - 1)), sr = radii.reduce((a, b) => a + b, 0);
+    let cnt = radii.map(r => Math.max(1, Math.round(n * r / sr))); cnt[rows - 1] += n - cnt.reduce((a, b) => a + b, 0);
+    if (cnt.some(c => c < 1)) continue;
+    const rg = rows === 1 ? R - r0 : (R - r0) / (rows - 1), ag = Math.min(...radii.map((r, k) => cnt[k] > 1 ? Math.PI * r / (cnt[k] - 1) : 2 * r));
+    const sc = Math.abs(Math.log(ag / rg)); if (!best || sc < best.sc) best = { sc, radii, cnt, gap: Math.min(ag, rows === 1 ? ag : rg) };
+  }
+  const p = []; best.radii.forEach((r, k) => { const c = best.cnt[k]; for (let j = 0; j < c; j++) p.push([Math.PI - Math.PI * (c === 1 ? .5 : j / (c - 1)), r]) });
+  p.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+  return { p, dot: best.gap * 0.43 };
+}
+function seatsView() {
+  const es = G.nat.es, tot = es.reduce((a, b) => a + b, 0), cx = 200, cy = 196, E = EPG[G.year];
+  document.querySelectorAll('[data-sv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sv === SV));
+  $('#laySeg').hidden = SV !== 'ep'; document.querySelectorAll('[data-lay]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lay === LAY));
+  const pk = {}; G.parties.forEach((p, i) => pk[p.k] = i);
+  const list = [];
+  if (SV === 'es') G.parties.map((p, i) => i).filter(i => es[i] > 0).sort((a, b) => keyOrder(G.parties[a].k) - keyOrder(G.parties[b].k)).forEach(i => { for (let n = 0; n < es[i]; n++) list.push({ i, t: G.parties[i].n }) });
+  else E.g.forEach(([id, lab, n, col]) => {
+    let sp = 0; Object.keys(E.es).sort((a, b) => keyOrder(a) - keyOrder(b)).forEach(k => { const c = E.es[k][id] || 0, i = pk[k]; for (let m = 0; m < c; m++) list.push({ i, g: col, t: `${lab} · ${G.parties[i].n} (España)` }); sp += c });
+    for (let m = sp; m < n; m++) list.push({ g: col, t: lab, o: 1 });
+  });
+  const H = hemiPos(list.length, 188, SV === 'es' ? 0.44 : 0.4), r = H.dot.toFixed(2);
+  if (SV === 'ep' && LAY === 'blk') {   // dentro de cada grupo, los escaños españoles forman un bloque compacto en el centro de su cuña
+    let k = 0; const P = H.p, out = new Array(P.length);
+    E.g.forEach(([id, lab, n]) => {
+      const idx = [...Array(n)].map((_, j) => k + j), mine = list.slice(k, k + n), spn = mine.filter(d => !d.o);
+      const xy = j => [P[j][1] * Math.cos(P[j][0]), P[j][1] * Math.sin(P[j][0])], mx = idx.reduce((a, j) => a + xy(j)[0], 0) / n, my = idx.reduce((a, j) => a + xy(j)[1], 0) / n;
+      const near = idx.slice().sort((a, b) => Math.hypot(xy(a)[0] - mx, xy(a)[1] - my) - Math.hypot(xy(b)[0] - mx, xy(b)[1] - my)).slice(0, spn.length).sort((a, b) => P[b][0] - P[a][0] || P[b][1] - P[a][1]);
+      const ns = new Set(near); near.forEach((j, m) => out[j] = spn[m]); let g = 0; const grey = mine.filter(d => d.o); idx.forEach(j => { if (!ns.has(j)) out[j] = grey[g++] }); k += n;
+    });
+    list.splice(0, list.length, ...out);
+  }
+  $('#hemi').innerHTML = H.p.map((q, n) => { const d = list[n], x = (cx + q[1] * Math.cos(q[0])).toFixed(1), y = (cy - q[1] * Math.sin(q[0])).toFixed(1);
+    return d.o ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${d.g}" fill-opacity=".26"><title>${esc(d.t)}</title></circle>` : `<circle cx="${x}" cy="${y}" r="${r}" fill="${pcol(d.i)}"${SV === 'ep' ? ` stroke="${d.g}" stroke-width="${(H.dot * 0.35).toFixed(2)}"` : ''}><title>${esc(d.t)}</title></circle>` }).join('');
+  if (SV === 'es') {
+    $('#seatn').textContent = `${G.date} · circunscripción única: los ${tot} escaños se reparten con el método D'Hondt sobre el voto de toda España, sin barrera electoral.`;
+    $('#hemin').textContent = tot; $('#hemil').textContent = 'eurodiputados elegidos en España'; $('#hleg').hidden = true;
+  } else {
+    const espT = E.g.reduce((a, g) => a + Object.values(E.es).reduce((b, x) => b + (x[g[0]] || 0), 0), 0), all = list.length;
+    $('#seatn').textContent = `${E.t}. Grupos políticos de izquierda a derecha; los escaños de cada grupo en tono claro y, ${LAY === 'blk' ? 'en el centro de cada grupo' : 'al principio de cada grupo, en línea'}, los eurodiputados españoles con el color de su partido (con borde del color del grupo). Un mismo partido puede repartir sus diputados entre varios grupos.${E.nota ? ' ' + E.nota : ''}`;
+    $('#hemin').textContent = nf(all); $('#hemil').textContent = `escaños · España ${espT} (${fmt(espT / all)})`;
+    $('#hleg').hidden = false;
+    $('#hleg').innerHTML = `<table class="tbl" style="margin-top:6px"><thead><tr><th>Grupo europeo</th><th>Escaños</th><th>De España</th><th>Partidos españoles</th></tr></thead><tbody>${E.g.map(([id, lab, n, col]) => { const sp = Object.keys(E.es).filter(k => E.es[k][id]).sort((a, b) => E.es[b][id] - E.es[a][id]);
+      return `<tr><td><span class="sw" style="background:${col}"></span>${esc(lab)}</td><td class="s">${n}</td><td class="s">${sp.reduce((a, k) => a + E.es[k][id], 0) || '–'}</td><td>${sp.map(k => `${swatch(pk[k])}${esc(G.parties[pk[k]].n)} ${E.es[k][id]}`).join(' · ')}</td></tr>` }).join('')}</tbody></table>`;
+  }
+  const valid = G.nat.v.reduce((a, b) => a + b, 0) + G.nat.bl;
+  $('#tbl').hidden = SV === 'ep';
+  $('#tbl tbody').innerHTML = G.parties.map((x, i) => i).filter(i => es[i] > 0).sort((a, b) => es[b] - es[a] || G.nat.v[b] - G.nat.v[a])
+    .map(i => `<tr><td>${swatch(i)}${esc(G.parties[i].n)}</td><td class="s">${es[i]}</td><td class="r">${nf(G.nat.v[i])}</td><td class="r">${fmt(G.nat.v[i] / valid)}</td></tr>`).join('');
+}
+/* ---- ficha nacional: lo que costó cada escaño ---- */
+function detail() {
+  const seats = G.seats, row = A.row, valid = A.valid, eff = effThreshold(row, seats), lastW = A.lastW, firstO = A.firstO;
+  let ks = A.order.filter(i => A.es[i] > 0 || row[i] >= 0.005); if (ALL) ks = A.order;
+  const vot = d => { const v = Math.abs(d) * valid; return nf(v >= 10000 ? rv(v, 100) : rv(v, 10)) };
+  const rowsH = ks.map(i => {
+    const n1 = needShare(row, i, seats, 1), c = A.es[i], nx = c + 1 <= seats ? needShare(row, i, seats, c + 1) : null;
+    const d1 = n1 === null ? null : row[i] - n1, dn = nx === null ? null : nx - row[i];
+    const c1 = n1 === null ? '–' : `${fmt(n1, 2)} <small class="${d1 >= 0 ? 'gd' : 'bd'}">${d1 >= 0 ? '+' : '−'}${nf(Math.abs(d1) * 100, 2)}</small><span class="v2">${d1 >= 0 ? `sobran ≈ ${vot(d1)} votos` : `faltan ≈ ${vot(d1)} votos`}</span>`;
+    const c2 = nx === null ? '–' : `${fmt(nx, 2)} <small class="bd">+${nf(dn * 100, 2)}</small><span class="v2">faltan ≈ ${vot(dn)} votos</span>`;
+    return `<tr><td><span class="wn">${swatch(i)}${esc(G.parties[i].n)}</span></td><td class="num">${nf(G.nat.v[i])}</td><td class="num"><b>${fmt(row[i], 2)}</b></td><td class="num s2">${c}</td><td class="num need" title="Voto que habría necesitado para el primer escaño, con el resto de partidos reducidos en proporción">${c1}</td><td class="num need" title="Voto que habría necesitado para un escaño más">${c2}</td></tr>`;
+  }).join('');
+  $('#pd').innerHTML = `<h2>Lo que costó cada escaño</h2><div class="meta">${seats} escaños · circunscripción única · ${nf((valid - G.nat.bl) / 1e6, 2)} M de votos a candidaturas (${nf(valid)} válidos)</div>
+  <div class="kpis k4"><div><b>${fmt(1 / (seats + 1), 2)}</b><span>voto aproximado que asegura un escaño (1/(escaños+1)); no hay barrera legal</span></div>
+  <div><b>${eff === null ? '–' : fmt(eff, 2)}</b><span>barrera efectiva: voto que habría necesitado un partido nuevo para sacar un escaño${eff === null ? '' : ` (≈ ${nf(rv(eff * valid, 1000))} votos)`}</span></div>
+  <div><b>${lastW ? esc(G.parties[lastW.k].n) : '–'}</b><span>se lleva el último escaño${lastW ? ` con ${fmt(lastW.q, 2)} (${nf(Math.round(lastW.q * valid))} votos entre ${lastW.d})` : ''}</span></div>
+  <div><b>${firstO ? esc(G.parties[firstO.k].n) : '–'}</b><span>primero fuera${firstO ? `, con ${fmt(firstO.q, 2)} (${nf(Math.round(firstO.q * valid))} votos entre ${firstO.d})` : ''}</span></div></div>
+  <div class="tw"><table class="pt mt prt vt"><thead><tr><th>Partido</th><th>Votos</th><th>% voto</th><th>Escaños</th><th>Para el 1.º</th><th>Para otro más</th></tr></thead><tbody>${rowsH}</tbody></table></div>
+  <p style="margin:10px 0 0"><button type="button" class="ghost" id="allp">${ALL ? 'Mostrar solo los principales' : 'Mostrar todas las candidaturas'}</button></p>
+  <p class="note" style="margin:10px 0 0">«Para el 1.º» y «Para otro más» son el voto en toda España que el partido habría necesitado para ese escaño, con el resto de partidos reducidos en proporción (verde si ya lo superaba, rojo si le faltaba). La cifra pequeña es la distancia en puntos y debajo, los votos que habrían tenido que cambiar de papeleta, aproximados con el reparto proporcional de los votos del resto.</p>`;
+  const qmax = A.q[0].q, qshow = A.q.filter(x => x.n > seats - 10);
+  $('#dhc').innerHTML = `<h2>Cómo se reparten los escaños</h2>
+  <p class="note">Método D'Hondt sobre el voto de toda España: cada candidatura divide su voto entre 1, 2, 3…; los ${seats} cocientes más altos se llevan un escaño. No hay barrera: cualquier lista entra en el reparto. Las barras sólidas ganan escaño; las de trazo punteado son los primeros que se quedan fuera. Se muestran los últimos diez escaños repartidos y los que se quedan a las puertas.</p>
+  <div class="qs">${qshow.map(x => `<div class="qr ${x.won ? 'won' : 'out'}"><span class="qn">${x.n}</span><span class="qp">${swatch(x.k)}${esc(G.parties[x.k].n)} <small>÷${x.d}</small></span><span class="qb"><i style="width:${x.q / qmax * 100}%;background:${pcol(x.k)}"></i></span><span class="qv">${fmt(x.q, 2)}<small>${nf(Math.round(x.q * valid))}</small></span></div>`).join('')}</div>`;
+  $('#allp').onclick = () => { ALL = !ALL; detail() };
+}
+function lastSeat() {
+  const seats = G.seats, row = A.row, valid = A.valid, MAXG = 1, fm = x => x.toFixed(2).replace('.', ',');
+  const h = A.lastW.k, gaps = [];
+  A.order.filter(i => i !== h).slice(0, 14).forEach(i => { const nd = needShare(row, i, seats, A.es[i] + 1); if (nd !== null) gaps.push([i, (nd - row[i]) * 100, (nd - row[i]) * valid]) });
+  gaps.sort((a, b) => a[1] - b[1]);
+  $('#lsn').textContent = `${G.parties[h].n} se llevó el último de los ${seats} escaños. Cada cuadrado es un rival y su posición marca cuántos puntos de voto le habrían faltado para quitárselo (con el resto de partidos reducidos en proporción). Con un reparto tan grande la escala es más fina: se muestran los que estaban a menos de ${MAXG} punto.`;
+  const near = gaps.filter(g => g[1] <= MAXG).slice(0, 5), x = g => (1 - Math.min(g, MAXG) / MAXG) * 100;
+  const ticks = [1, .75, .5, .25, 0].map((v, k) => `<span class="${k % 2 ? 'o' : ''}" style="left:${(1 - v / MAXG) * 100}%">${v === 0 ? 'empate' : 'a ' + nf(v, 2) + ' pts'}</span>`).join('');
+  let s = `<div class="ax"><span>España</span><div class="tk">${ticks}</div><span class="hh">Tiene el último escaño</span></div>`;
+  if (!near.length) s += `<p class="note" style="margin:12px 0 0">Ningún rival estaba a menos de ${MAXG} punto. El más cercano era ${gaps.length ? `${esc(G.parties[gaps[0][0]].n)}, a ${fm(gaps[0][1])} puntos (unos ${nf(Math.ceil(gaps[0][2] / 100) * 100)} votos)` : '—'}.</p>`;
+  else {
+    const g0 = near[0], pos = x(g0[1]), al = pos > 70 ? `right:${100 - pos}%;text-align:right` : `left:${pos}%;transform:translateX(-50%)`;
+    s += `<div class="row static"><span class="nm"><b>España</b><small>${seats} escaños</small></span><span class="tr">${[.25, .5, .75].map(v => `<span class="g" style="left:${x(v)}%"></span>`).join('')}${near.slice().reverse().map(g => `<span class="sq" style="left:${x(g[1])}%;background:${pcol(g[0])}" title="${esc(G.parties[g[0]].n)} a ${fm(g[1])} pts."></span>`).join('')}<span class="lb" style="color:${pcol(g0[0])};${al}">${esc(G.parties[g0[0]].n.toUpperCase())} a ${fm(g0[1])} pts.</span></span><span class="hd" style="color:${pcol(h)}">${esc(G.parties[h].n)}</span></div>`;
+    s += `<p class="note" style="margin:12px 0 0">${near.map(g => `${esc(G.parties[g[0]].n)}: ${fm(g[1])} pts · unos ${nf(Math.ceil(g[2] / 100) * 100)} votos`).join(' · ')}</p>`;
+  }
+  $('#ls').innerHTML = s;
+}
+/* ---- mapa en tres niveles ---- */
+const unitOf = (lv, id) => lv === 'cc' ? G.cc[G.ci[id]] : lv === 'prov' ? G.prov[G.pi[id]] : G.nat;
+function tiles() {
+  document.querySelectorAll('[data-lv]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lv === LV));
+  $('#mapt').textContent = { esp: 'Quién gana en España', cc: 'Quién gana en cada comunidad autónoma', prov: 'Quién gana en cada provincia' }[LV];
+  $('#mapn').textContent = (LV === 'esp' ? 'Color: candidatura más votada en el conjunto de España; el tono refleja su ventaja sobre la segunda.' : `Color: candidatura más votada en cada ${LV === 'cc' ? 'comunidad' : 'provincia'}; cuanto más pálido, menor la ventaja sobre la segunda. Ceuta y Melilla se muestran como cuadrados y Canarias en su recuadro. Pulsa ${LV === 'cc' ? 'una comunidad' : 'una provincia'} para ver su resumen al lado; el botón del resumen abre su vista.`);
+  const sel = LV === 'cc' ? SELC : LV === 'prov' ? SELP : 'ES';
+  drawNatMap('#tiles', MAP, CCM, { mode: LV, sel, pick: id => { if (LV === 'esp') return; if (LV === 'cc') SELC = id; else SELP = id; tiles(); side() },
+    style: id => { const u = unitOf(LV, id), w = winOf(u.v, u.bl); return w ? shade(w.w, w.m, 0.22) : 'fill:var(--track)' },
+    title: id => { const u = unitOf(LV, id), w = winOf(u.v, u.bl); return `${LV === 'esp' ? 'España' : u.n} · ${w ? G.parties[w.w].n + ' ' + fmt(w.sh) + ' · ventaja ' + nf(w.m * 100, 1) + ' pts' : 'sin datos'}` } });
+  const units = LV === 'cc' ? G.cc : LV === 'prov' ? G.prov : [G.nat], used = new Set(units.map(u => winOf(u.v, u.bl)).filter(Boolean).map(w => w.w));
+  const cnt = {}; units.forEach(u => { const w = winOf(u.v, u.bl); if (w) cnt[w.w] = (cnt[w.w] || 0) + 1 });
+  $('#mleg').innerHTML = [...used].sort((a, b) => cnt[b] - cnt[a]).map(i => `<span><i style="background:${pcol(i)}"></i>${esc(G.parties[i].n)}${LV === 'esp' ? '' : ' ' + cnt[i]}</span>`).join('') + (LV === 'esp' ? '' : '<span>Más pálido = ventaja más corta</span>');
+}
+function side() {
+  const lv = LV, id = lv === 'cc' ? SELC : lv === 'prov' ? SELP : 'ES', u = unitOf(lv, id), { valid, row } = shares(u.v, u.bl), nr = shares(G.nat.v, G.nat.bl).row;
+  const idx = u.v.map((x, i) => i).filter(i => u.v[i] > 0).sort((a, b) => u.v[b] - u.v[a]).slice(0, 9), vt = valid + u.nu;
+  const name = lv === 'esp' ? 'España' : u.n, link = lv === 'cc' ? hCc(id) : lv === 'prov' ? hProv(id) : null;
+  const meta = lv === 'esp' ? `${G.seats} escaños · ${nf(G.cc.length)} comunidades y ciudades autónomas` : lv === 'cc' ? `${u.provs.length === 1 ? 'Comunidad uniprovincial' : u.provs.length + ' provincias'} · participación ${fmt(vt / u.censo)}` : `${esc(ccName(u.cc))} · participación ${fmt(vt / u.censo)}`;
+  $('#sd').innerHTML = `<h3>${esc(name)}</h3><div class="meta">${meta} · ${nf(valid)} votos válidos</div>
+  <table class="tbl"><thead><tr><th>Partido</th><th>Voto</th><th>Votos</th>${lv === 'esp' ? '<th>Escaños</th>' : '<th>Dif.</th>'}</tr></thead><tbody>${idx.map(i => { const d = row[i] - nr[i];
+    return `<tr><td>${swatch(i)}${esc(G.parties[i].n)}</td><td class="d" style="color:var(--ink)">${fmt(row[i])}</td><td class="d">${nf(u.v[i])}</td>${lv === 'esp' ? `<td class="s">${G.nat.es[i]}</td>` : `<td class="d"><span class="${d >= 0 ? 'gd' : 'bd'}">${pts(d) || '0,0'}</span></td>`}</tr>` }).join('')}</tbody></table>
+  ${lv === 'esp' ? '<p class="note" style="margin:10px 0 0">Elige «Comunidades autónomas» o «Provincias» para ver quién gana en cada territorio.</p>' : `<p class="note" style="margin:10px 0 0">«Dif.»: diferencia en puntos con el resultado de toda España.</p>`}
+  ${link ? `<p style="margin:14px 0 0"><a class="btnlk" href="${link}">Ver ${lv === 'cc' ? (id === '18' || id === '19' ? 'la ciudad de ' + esc(CCSHORT[id]) : esc(name)) : (AUTONOMAS[id] ? 'la ciudad de ' : 'la provincia de ') + esc(name)} →</a></p>` : ''}`;
+  $('#bCc').href = hCc(SELC); $('#bProv').href = hProv(SELP);
+}
+/* ---- tabla por comunidad o provincia ---- */
+function rtable() {
+  document.querySelectorAll('[data-rt]').forEach(b => b.setAttribute('aria-pressed', b.dataset.rt === RT));
+  $('#rtt').textContent = RT === 'cc' ? 'Resultados por comunidad autónoma' : 'Resultados por provincia';
+  const U = RT === 'cc' ? G.cc : G.prov, ps = A.order.filter(i => G.nat.v[i] / A.valid >= 0.01 || G.nat.es[i] > 0);
+  const rows = U.map(u => { const vc = u.v.reduce((a, b) => a + b, 0), valid = vc + u.bl, w = winOf(u.v, u.bl), o = { u, id: u.id, name: u.n, censo: u.censo, part: u.censo ? (valid + u.nu) / u.censo : 0, ganador: w ? G.parties[w.w].n : '', sh: w ? w.sh : 0, margen: w ? w.m : 0, w, valid, pbl: valid ? u.bl / valid : 0, cc: RT === 'prov' ? ccName(u.cc) : '' };
+    ps.forEach(i => o['p' + i] = valid ? u.v[i] / valid : 0); return o });
+  const k = SORT.k in rows[0] ? SORT.k : 'censo'; rows.sort((a, b) => (typeof a[k] === 'string' ? a[k].localeCompare(b[k], 'es') : a[k] - b[k]) * SORT.d);
+  const th = (key, lab, cls = '') => `<th data-s="${key}" ${SORT.k === key ? `aria-sort="${SORT.d > 0 ? 'ascending' : 'descending'}"` : ''} class="${cls}">${lab}</th>`;
+  const cell = (sh, v) => `<td class="num pc">${fmt(sh)}<small>${nf(v)}</small></td>`;
+  $('#rtab').innerHTML = `<thead><tr>${th('name', RT === 'cc' ? 'Comunidad' : 'Provincia', 'stk')}${RT === 'prov' ? th('cc', 'Comunidad') : ''}${th('censo', 'Electores')}${th('part', 'Particip.')}${th('ganador', 'Más votado')}${th('sh', '% ganador')}${th('margen', 'Ventaja')}${ps.map(i => th('p' + i, `<span class="wn">${swatch(i)}${esc(G.parties[i].n)}</span>`)).join('')}${th('pbl', 'En blanco')}</tr></thead><tbody>${rows.map(r => `<tr class="rw" data-id="${r.id}"><td class="stk">${esc(r.name)}</td>${RT === 'prov' ? `<td>${esc(r.cc)}</td>` : ''}<td class="num">${nf(r.censo)}</td><td class="num">${fmt(r.part)}</td><td>${r.w ? `<span class="wn">${swatch(r.w.w)}${esc(r.ganador)}</span>` : '–'}</td><td class="num">${r.w ? fmt(r.sh) : '–'}</td><td class="num">${r.w ? nf(r.margen * 100, 1) + ' pts' : '–'}</td>${ps.map(i => cell(r['p' + i], r.u.v[i])).join('')}${cell(r.pbl, r.u.bl)}</tr>`).join('')}</tbody>`;
+  $('#rtab').querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { const kk = t.dataset.s; SORT = { k: kk, d: SORT.k === kk ? -SORT.d : (['name', 'ganador', 'cc'].includes(kk) ? 1 : -1) }; rtable() });
+  $('#rtab').querySelectorAll('tr.rw').forEach(t => t.onclick = () => nav(RT === 'cc' ? hCc(t.dataset.id) : hProv(t.dataset.id)));
+}
+function pblock() {
+  const ps = A.order.filter(i => G.nat.v[i] / A.valid >= 0.005 || G.nat.es[i] > 0);
+  PBS = PBS || { party: ps[0], ord: 'pct_desc' };
+  const cc = PBM === 'cc', units = (cc ? G.cc : G.prov).map(u => ({ key: u.id, name: u.n, censo: u.censo, part: u.censo ? (u.v.reduce((a, b) => a + b, 0) + u.bl + u.nu) / u.censo : 0, v: u.v, bl: u.bl, nu: u.nu }));
+  partyBlock($('#pbcard'), { state: PBS, ps, units, parent: { v: G.nat.v, bl: G.nat.bl }, parentName: 'en España',
+    modes: [{ id: 'cc', label: 'Por comunidad autónoma' }, { id: 'prov', label: 'Por provincia' }], mode: PBM, onMode: x => { PBM = x; pblock() },
+    unitName: cc ? 'Comunidad' : 'Provincia', unitsPl: cc ? 'comunidades' : 'provincias',
+    note: 'El número junto al nombre es su número de escaños. Elige un partido, el nivel (comunidades o provincias) y cómo ordenar: la tabla muestra los diez primeros.',
+    chipSub: j => nf(G.nat.es[j]) + ' esc.', onRow: id => nav(cc ? hCc(id) : hProv(id)) });
+}
+function natDraw(lv) {
+  return (host, styleOf, textOf, titleOf, pick) => {
+    const b = MAP.box, SQ = lv === 'cc' ? { '18': '51', '19': '52' } : { '51': '51', '52': '52' };
+    const shapes = lv === 'cc' ? Object.keys(CCM).filter(k => k !== 'ES' && G.ci[k] !== undefined).map(k => [k, CCM[k].d, CCM[k].l]) : Object.keys(MAP.paths).filter(k => !SQ[k]).map(k => [k, MAP.paths[k], MAP.lab[k]]);
+    let h = shapes.map(([k, d]) => `<path d="${d}" data-k="${k}" style="${styleOf(k)}"><title>${esc(titleOf(k))}</title></path>`).join('');
+    let t = shapes.map(([k, d, l]) => l && textOf ? `<text x="${l[0]}" y="${l[1]}" font-size="17" stroke-width="4">${textOf(k)}</text>` : '').join('');
+    Object.keys(SQ).forEach(k => { const q = MAP.sq[SQ[k]]; if (!q) return; const [x, y, z] = q;
+      h += `<rect data-k="${k}" x="${x}" y="${y}" width="${z}" height="${z}" rx="4" style="${styleOf(k)}"><title>${esc(titleOf(k))}</title></rect>`; if (textOf) t += `<text x="${x + z / 2}" y="${y + z / 2}" font-size="17" stroke-width="4">${textOf(k)}</text>` });
+    host.innerHTML = `<svg class="ptmap pmap" viewBox="0 0 ${MAP.w} ${MAP.h}" role="img" aria-label="Mapa de % de voto">${h}<rect x="${b[0]}" y="${b[1]}" width="${b[2] - b[0]}" height="${b[3] - b[1]}" rx="6" style="fill:none;stroke:var(--faint);stroke-dasharray:5 4;pointer-events:none"/>${t}</svg>`;
+    host.querySelectorAll('[data-k]').forEach(p => p.onclick = () => pick(p.dataset.k));
+  };
+}
+let PTS;
+function partidos() {
+  const ps = A.order.filter(i => G.nat.v[i] / A.valid >= 0.005 || G.nat.es[i] > 0);
+  const U = (L, lv) => L.map(u => ({ key: u.id, name: u.n, v: u.v, bl: u.bl, link: lv === 'cc' ? hCc(u.id) : hProv(u.id) }));
+  partyTab($('#p-par'), { state: PTS = PTS || undefined, ps, parent: { name: 'España', v: G.nat.v, bl: G.nat.bl, isNat: true }, chipSub: j => nf(G.nat.es[j]) + ' esc.',
+    note: 'El número junto al nombre es su número de escaños en España. Elige un partido para ver su porcentaje de voto en cada comunidad o provincia.',
+    levels: [{ id: 'cc', label: 'Comunidades autónomas', one: 'Comunidad', pl: 'comunidades', labels: true, units: U(G.cc, 'cc'), draw: natDraw('cc') },
+      { id: 'prov', label: 'Provincias', one: 'Provincia', pl: 'provincias', labels: true, units: U(G.prov, 'prov'), draw: natDraw('prov') }] });
+}
+(async () => {
+  try {
+    await loadG(); A = analyze(NATU());
+    [MAP, CCM] = await Promise.all([jget('mapas/provincias.json'), jget('mapas/ccaa.json')]);
+    partic(); votes(); seatsView(); tiles(); side(); detail(); lastSeat(); rtable(); pblock(); partidos();
+    document.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { LV = b.dataset.lv; tiles(); side() });
+    document.querySelectorAll('[data-rt]').forEach(b => b.onclick = () => { RT = b.dataset.rt; rtable() });
+    document.querySelectorAll('[data-sv]').forEach(b => b.onclick = () => { SV = b.dataset.sv; seatsView() });
+    document.querySelectorAll('[data-lay]').forEach(b => b.onclick = () => { LAY = b.dataset.lay; seatsView() });
+    mountTabs();
+    await mountBar('', null, '');
+    $('#bMun').href = hMun(DEF_MUN);
+    $('#notes').innerHTML = notesHTML(); document.title = 'Elecciones europeas ' + G.year + ' en España';
+  } catch (e) { console.error(e); $('#notes').textContent = 'No se pudieron cargar los datos: ' + e }
+})();
+</script>
+</body>
+</html>
