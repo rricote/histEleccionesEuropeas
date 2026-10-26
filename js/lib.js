@@ -26,7 +26,7 @@ const bk = pid => Math.floor(+pid / 9);                    // los datos de cada 
 const loadProv = async pid => (await jget(BASE + 'prov_b' + bk(pid) + '.json'))[pid];
 const loadMunMap = async pid => (await jget('mapas/mun.json'))[pid];
 const loadCcMap = async cc => { try { return await jget('mapas/ccaa_mun/' + cc + '.json') } catch (e) { return null } };
-const loadSecMap = async pid => { if (!G.sections) return null; try { return (await jget('mapas/sec/' + G.mapyear + '/b' + bk(pid) + '.json'))[pid] || null } catch (e) { return null } };
+const loadSecMap = async pid => { if (!G.sections) return null; try { return (await jget('mapas/sec/' + G.mapyear + '/p' + pid + '.json')) || null } catch (e) { return null } };
 function notesHTML() {
   const src = 'Ministerio del Interior: resultados de las elecciones al Parlamento Europeo por mesa. Cada mesa se agrega por sección censal, municipio, provincia y comunidad autónoma; el voto CERA (residentes en el extranjero) cuenta en la provincia, la comunidad y el total, pero no en ningún municipio.';
   const sys = `<div><b>Sistema.</b> España es una circunscripción única: los ${G.seats} escaños se reparten con el método D'Hondt sobre el voto de toda España y sin barrera electoral. Por eso los escaños solo existen en el total nacional; en comunidades, provincias y municipios se muestra el voto.</div>`;

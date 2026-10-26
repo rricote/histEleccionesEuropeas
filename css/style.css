@@ -427,3 +427,4 @@ small.gd,td.gd{color:var(--good)}small.bd,td.bd{color:var(--bad)}
 .zbtn{position:absolute;top:8px;right:8px;z-index:5;font:inherit;font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .zbtn:hover{background:var(--bg)}
 svg.natmap.panning,svg.pmap.panning{cursor:grabbing}
+.pmap.sec path:not(.cur):not(.hl):not(.nd):not(.pin){stroke:var(--surface);stroke-width:.5px;stroke-opacity:.9}
